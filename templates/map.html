@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>earthquake map</title>
+
+     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.8.0/dist/leaflet.css"
+   integrity="sha512-hoalWLoI8r4UszCkZ5kL8vayOGVae1oxXe/2A4AO6J9+580uKHDO3JdHb7NzwwzK5xr/Fs0W40kiNHxM9vyTtQ=="
+   crossorigin=""/>
+
+     <script src="https://unpkg.com/leaflet@1.8.0/dist/leaflet.js"
+   integrity="sha512-BB3hKbKWOc9Ez/TAwyWxNXeoV9c1v6FIeYiBieIWkpLjauysF18NzgR1MBNBXf8/KABdlkX68nAhlwcDFLGPCQ=="
+   crossorigin=""></script>
+    <style>
+        body {
+            padding: 0;
+            margin: 0;
+        }
+        html, body, #map {
+            height: 100%;
+            width: 100%;
+        }
+    </style>
+</head>
+<body>
+
+<div id="map">
+
+</div>
+
+
+<script>
+    let coordinates = {{ coordinates }};
+    let markers = [];
+
+    let map = L.map('map').setView([{{lat}}, {{lng}}], {{zoom}});
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 19,
+    attribution: '© OpenStreetMap'
+    }).addTo(map);
+    let markerGroup = L.layerGroup().addTo(map);
+    for(let coordinate of coordinates){
+        L.marker([coordinate[1], coordinate[0]]).addTo(map);
+    }
+
+
+    function onMapClick(e){
+
+        if (markers){
+            for (let mark of markers){
+                map.removeLayer(mark)
+            }
+        }
+
+        fetch({{ url_for("get_earthquake") | tojson}},{
+            method: "POST",
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(e.latlng)
+        })
+            .then((response) => response.json())
+            .then(data => {
+                if (data["points"]){
+                    let circle = L.circle(e.latlng,{
+                        color: 'red',
+                        fillColor: '#f03',
+                        fillOpacity: 0.5,
+                        radius: 1000000,
+                    }).addTo(map);
+
+                    markers.push(circle)
+
+                    for(let coordinate of data["points"]){
+                        marker = L.marker([coordinate[1], coordinate[0]]).addTo(markerGroup);
+                        markers.push(marker)
+                    }
+                }
+            })
+            .catch((error) => {
+                console.log(error)
+            })
+    }
+
+    map.on("click", onMapClick)
+</script>
+</body>
+</html>
